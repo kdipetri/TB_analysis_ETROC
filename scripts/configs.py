@@ -137,9 +137,10 @@ def version(run):
     elif run > 27424 and run < 27690: return "v2"
     else            : return "v1"
 
-def get_mean_response_channel(tree,cfg,ch,outfile):
+def get_mean_amplitude_channel(tree,cfg,ch,outfile):
    
     minAmp = 30 # for this plot only
+    if cfg == "config_133" : minAmp = 50
     minPh = photek_min(cfg)
     maxPh = photek_max(cfg)
     histMax = 500
@@ -158,7 +159,7 @@ def get_mean_response_channel(tree,cfg,ch,outfile):
     hist.Draw()
     f1.Draw("same")
 
-    c.Print("histos/plots/{}_ch{}_amp.pdf".format(cfg,ch))
+    c.Print("plots/configs/{}_ch{}_amp.pdf".format(cfg,ch))
 
     outfile.cd()
     hist.Write()
@@ -195,7 +196,7 @@ def get_time_CFD(tree,cfg,ch,outfile):
     hist.Draw()
     f1.Draw("same")
 
-    c.Print("histos/plots/{}_ch{}_timeCFD.pdf".format(cfg,ch))
+    c.Print("plots/configs/{}_ch{}_timeCFD.pdf".format(cfg,ch))
 
     outfile.cd()
     hist.Write()
@@ -231,12 +232,12 @@ def get_config_results(cfg):
     # May get more specific later (by ch and cfg)
     for ch in range(0,3): # skip photek
 
-        outname = "histos/root/{}_ch{}.root".format(cfg,ch)
+        outname = "plots/configs/root/{}_ch{}.root".format(cfg,ch)
         outfile = ROOT.TFile.Open(outname,"RECREATE")
         print(outfile)
     
         # Landau
-        get_mean_response_channel(tree,cfg,ch,outfile)
+        get_mean_amplitude_channel(tree,cfg,ch,outfile)
         # Time CFD
         get_time_CFD(tree,cfg,ch,outfile)
     
@@ -249,6 +250,7 @@ def get_configurations():
         # for tmp debugging
         #if i > 0: break 
         #if "156" not in line: continue
+        if "133" not in line: continue
 
         if "#" in line: continue
         cfg = line.strip()
