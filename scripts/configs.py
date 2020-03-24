@@ -347,7 +347,7 @@ def get_configurations():
         # for tmp debugging
         #if i > 0: break 
         #if "156" not in line: continue
-        #if "146" not in line: continue
+        if "149" not in line: continue
 
         if "#" in line: continue
         cfg = line.strip()

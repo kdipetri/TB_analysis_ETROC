@@ -135,6 +135,7 @@ def get_scan_results(scan):
         
         rootfile = ROOT.TFile.Open("plots/configs/root/config_{}_ch{}.root".format(cfg,ch))
         if not rootfile : print("MISSING : config_{}_ch{}".format(cfg,ch))
+        print(cfg)
 
         mean_amplitude, err_amplitude  = get_amplitude(rootfile)
         mean_amplitudes.append(mean_amplitude) 

@@ -32,15 +32,15 @@ def yaxis(name):
     ystring = name.split("_v_")[0]
     return axis(ystring) 
 
-def cosmetics(graph,colorindex,tb=False):
+def cosmetics(graph,colorindex,ucsc=False):
     #print(colorindex,colors[colorindex])
     graph.SetLineColor(colors[colorindex])
     graph.SetMarkerColor(colors[colorindex])
     graph.SetMarkerSize(0.75)
     graph.SetMarkerStyle(20)
-    if tb:
-        graph.SetMarkerSize(2)
-        #graph.SetMarkerStyle(29)
+    if ucsc:
+        graph.SetMarkerSize(1)
+        graph.SetMarkerStyle(29)
     return 
 
 
@@ -52,8 +52,8 @@ def plot_overlay(series, scans, labels, gr_name ):
 
     mgraph = ROOT.TMultiGraph()
     left = True 
-    if "tres_CFD_v_amp"  in gr_name : left = False 
-    if "tres_CFD_v_bias" in gr_name : left = False 
+    if "tresCFD_v_amp"  in gr_name : left = False 
+    if "tresCFD_v_bias" in gr_name : left = False 
         
     if left : leg = ROOT.TLegend(0.17,0.62,0.56,0.86)
     else    : leg = ROOT.TLegend(0.5,0.62,0.85,0.86)
@@ -62,7 +62,9 @@ def plot_overlay(series, scans, labels, gr_name ):
     for i,scan in enumerate(scans):
         outfile = ROOT.TFile.Open("plots/scans/root/{}.root".format(scan))
         graph = outfile.Get("gr_{}_{}".format(scan,gr_name))
-        cosmetics(graph,i)
+        ucsc=0
+        if i==0: ucsc=1
+        cosmetics(graph,i,ucsc)
         mgraph.Add(graph)
         leg.AddEntry(graph, labels[i] ,"EP")
     

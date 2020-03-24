@@ -2,3 +2,11 @@ scan_UCSC14_bias
 scan_UCSC16_bias
 scan_ETROC9ampLP_bias
 scan_ETROC9ampHP_bias
+scan_ETROC11ampHP_bias
+scan_ETROC11ampLP_bias
+scan_ETROC9ampHPtest_bias
+scan_ETROC9ampLPtest_bias
+scan_ETROC9ampHPtest2_bias
+scan_ETROC9ampLPtest2_bias
+scan_ETROC11ampHPtest2_bias
+scan_ETROC11ampLPtest2_bias
