@@ -51,8 +51,8 @@ def get_min_amp(ch=None,cfg=None):
     elif ch == 1 : 
             if global_conf == 130 : return 130
             elif global_conf == 131 : return 150
-            elif global_conf == 132 : return 200
-            elif global_conf == 133 : return 200
+            elif global_conf == 132 : return 180
+            elif global_conf == 133 : return 100
             elif global_conf == 134 : return 70
             elif global_conf == 142 : return 70
             elif global_conf == 143 : return 130
@@ -75,12 +75,20 @@ def get_min_amp(ch=None,cfg=None):
             else : return 50
     elif ch == 2 :# not done here 
         if is_discrim(ch,cfg) : return 400
-        else : return 20
+        else : 
+            if   global_conf == 130 : return 70
+            elif global_conf == 131 : return 80
+            elif global_conf == 132 : return 110
+            elif global_conf == 133 : return 125
+            elif global_conf == 134 : return 40
+            elif global_conf == 145 : return 70
+            elif global_conf == 146 : return 100
+            else : return 25
     else : return 20
 
 def get_max_amp(ch=None,cfg=None):
     if ch == 3: return photek_max(cfg)
-    elif is_etroc_amp(ch,cfg) : return 720 # may need to set this by config
+    elif is_etroc_amp(ch,cfg) : return 710 # may need to set this by config
     elif is_discrim(ch,cfg) : return 1000 # may need to adjust
     else : return 340 # is UCSD may need to adjust
     
@@ -122,7 +130,7 @@ def is_discrim(ch=None,cfg=None):
 
 def is_etroc_amp(ch=None,cfg=None):
     global_conf = int(cfg.split("_")[1])
-    if global_conf < 146 : 
+    if global_conf <= 146 : 
         if ch == 1 : return True
     else : 
         if ch == 0 : return True 
@@ -152,7 +160,7 @@ def get_mean_amplitude_channel(tree,cfg,ch,outfile):
     tree.Project("h_amplitude","amp[%i]"%ch,"amp[%i]>%f&&amp[%i]>%f"%(ch,minAmp,ch_photek,minPh))
 
     f1 = ROOT.TF1("f_amplitude","landau",0,histMax)
-    hist.Fit(f1)
+    hist.Fit(f1,"Q")
 
     c = ROOT.TCanvas()
     hist.SetTitle(";Amplitude [mV];Events")
@@ -165,7 +173,79 @@ def get_mean_amplitude_channel(tree,cfg,ch,outfile):
     hist.Write()
     f1.Write()
 
-    return f1.GetParameter(1),f1.GetParError(1)
+    return 
+
+def get_charge_channel(tree,cfg,ch,outfile):
+       
+    # ignore if discriminator
+    if is_discrim(ch,cfg): return 
+
+    minAmp = get_min_amp(ch,cfg)
+    minPh = photek_min(cfg)
+    maxPh = photek_max(cfg)
+    transimpedance = 4700
+    if is_etroc_amp(ch,cfg): transimpedance = 33000  
+
+    hist = ROOT.TH1D("h_charge","",50,0,100)
+    # Qin = Qout / transimpedance 
+    # Q_out is the pulse area with units of volts * times 50 ohms, 
+    # because it is terminated at 50 ohms
+    # transimpedance UCSC = 470 * 10 (second stage)
+    # transimpedance ETROC = 4400 (default gain)  * 0.8 (buffer) * 12 (second stage) * SF
+
+    tree.Project("h_charge","-1000*integral[%i]*1e9*50/%f"%(ch,transimpedance),"amp[%i]>%f&&amp[3]>%i"%(ch,minAmp,minPh))
+    
+    f1 = ROOT.TF1("f_charge","landau",0,100)
+    hist.Fit(f1,"Q")
+
+    c = ROOT.TCanvas()
+    hist.SetTitle(";Integrated charge [fC];Events")
+    hist.Draw()
+    f1.Draw("same")
+
+    outfile.cd()
+    hist.Write()
+    f1.Write()
+
+    c.Print("plots/configs/{}_ch{}_charge.pdf".format(cfg,ch))
+
+    return 
+
+def get_slew_rate_channel(tree,cfg,ch,outfile):
+    minAmp = get_min_amp(ch,cfg)
+
+    hist = ROOT.TH1D("h_slewrate","",60,0,600e9)
+    tree.Project("h_slewrate","abs(risetime[%i])"%ch,"amp[%i]>%f"%(ch,minAmp))  ### mV/ s
+
+    c = ROOT.TCanvas()
+    hist.Draw()
+    outfile.cd()
+    hist.Write()
+
+    c.Print("plots/configs/{}_ch{}_slewrate.pdf".format(cfg,ch))
+
+    return 
+
+def get_risetime_channel(tree,cfg,ch,outfile):
+    minAmp = get_min_amp(ch,cfg)
+
+    hist = ROOT.TH1D("h_risetime","",150,0,3)
+    tree.Project("h_risetime","1e9*abs(amp[%i]/risetime[%i])"%(ch,ch),"amp[%i]>%i"%(ch,minAmp))  ### mV/ s
+
+    c = ROOT.TCanvas()
+    hist.Draw()
+    outfile.cd()
+    hist.Write()
+    c.Print("plots/configs/{}_ch{}_risetime.pdf".format(cfg,ch))
+
+    return 
+
+def get_baseline_RMS_channel(tree,cfg,ch,outfile):
+    hist = ROOT.TH1F("h_baselineRMS","",20,-1000,1000)
+    tree.Project("h_baselineRMS","baseline_RMS[%i]"%ch,"")
+    outfile.cd()
+    hist.Write()
+    return 
 
 def get_time_CFD(tree,cfg,ch,outfile):
 
@@ -176,12 +256,12 @@ def get_time_CFD(tree,cfg,ch,outfile):
     minT = get_min_time(ch,cfg)
     maxT = get_max_time(ch,cfg)
     
-    print("minAmp = {}".format(minAmp))
-    print("maxAmp = {}".format(maxAmp))
-    print("minPh  = {}".format(minPh ))
-    print("maxPh  = {}".format(maxPh ))
-    print("minT   = {}".format(minT  ))
-    print("maxT   = {}".format(maxT  ))
+    #print("minAmp = {}".format(minAmp))
+    #print("maxAmp = {}".format(maxAmp))
+    #print("minPh  = {}".format(minPh ))
+    #print("maxPh  = {}".format(maxPh ))
+    #print("minT   = {}".format(minT  ))
+    #print("maxT   = {}".format(maxT  ))
 
     #landau hist
     hist = ROOT.TH1D("h_timeCFD","",100,minT,maxT)
@@ -189,7 +269,7 @@ def get_time_CFD(tree,cfg,ch,outfile):
 
     
     f1 = ROOT.TF1("f_timeCFD","gaus",minT,maxT)
-    hist.Fit(f1)
+    hist.Fit(f1,"Q")
 
     c = ROOT.TCanvas()
     hist.SetTitle(";t-t_{ref}(CFD) [s];Events")
@@ -232,15 +312,32 @@ def get_config_results(cfg):
     # May get more specific later (by ch and cfg)
     for ch in range(0,3): # skip photek
 
+        # for speed
+        if (is_discrim(ch,cfg) or is_etroc_amp(ch,cfg)) and "IBSel" not in cfg: continue  
+        if not is_discrim(ch,cfg) and not is_etroc_amp(ch,cfg) and "IBSel" in cfg: continue
+        
         outname = "plots/configs/root/{}_ch{}.root".format(cfg,ch)
         outfile = ROOT.TFile.Open(outname,"RECREATE")
         print(outfile)
     
-        # Landau
+        # Amplifier basics  
         get_mean_amplitude_channel(tree,cfg,ch,outfile)
-        # Time CFD
+        get_charge_channel(tree,cfg,ch,outfile)
+        get_slew_rate_channel(tree,cfg,ch,outfile)
+        get_risetime_channel(tree,cfg,ch,outfile)
+        get_baseline_RMS_channel(tree,cfg,ch,outfile)
         get_time_CFD(tree,cfg,ch,outfile)
+
+        # Discriminator stuffs
+        # TODO : 
+        #   timewalk 
+        #   TOT
+        #   time res TOT
+        #   amp amp v amp TOT
+        #   amp amp v dis TOT
+        #   amp TOT v dis TOT
     
+    return
         
 def get_configurations():
     # Loop through configurations 
@@ -250,7 +347,7 @@ def get_configurations():
         # for tmp debugging
         #if i > 0: break 
         #if "156" not in line: continue
-        if "133" not in line: continue
+        #if "146" not in line: continue
 
         if "#" in line: continue
         cfg = line.strip()

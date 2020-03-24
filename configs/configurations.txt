@@ -25,6 +25,7 @@ config_142_IBSel_0b000_RFSel_3_DAC_000
 config_143
 config_143_IBSel_0b000_RFSel_3_DAC_000
 config_144
+config_144_IBSel_0b000_RFSel_3_DAC_000
 config_145
 config_145_IBSel_0b000_RFSel_3_DAC_000
 config_146

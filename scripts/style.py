@@ -3,6 +3,8 @@ import ROOT
 
 def setStyle():
     ROOT.gROOT.SetBatch(ROOT.kTRUE)
+    ROOT.gROOT.ProcessLine( "gErrorIgnoreLevel = 1001;")
+    #ROOT.Math.MinimizerOptions.SetPrintLevel(-1) # turn off print output? 
     ROOT.gStyle.SetLabelFont(42,"xyz")
     ROOT.gStyle.SetLabelSize(0.05,"xyz")
     ROOT.gStyle.SetTitleFont(42,"xyz")

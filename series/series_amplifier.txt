@@ -1,0 +1,6 @@
+#scan; notes
+#ETROC #9 ATLAS 90x500 MW W2 P5 
+scan_UCSC14_bias; UCSC #14, 20C; CMS 50x500 P2
+scan_UCSC16_bias; UCSC #16, 20C; ATLAS 50x500 MW 2,
+scan_ETROC9ampLP_bias; ETROC #9, low power, 20C
+scan_ETROC9ampHP_bias; ETROC #9, high power, 20C
