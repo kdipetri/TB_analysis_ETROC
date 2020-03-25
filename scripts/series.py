@@ -32,15 +32,29 @@ def yaxis(name):
     ystring = name.split("_v_")[0]
     return axis(ystring) 
 
-def cosmetics(graph,colorindex,ucsc=False):
-    #print(colorindex,colors[colorindex])
-    graph.SetLineColor(colors[colorindex])
-    graph.SetMarkerColor(colors[colorindex])
+def colorindex(name):
+    if "UCSC14"       in name : return 0
+    elif "ETROC9ampLP"  in name : return 1
+    elif "ETROC11ampLP" in name : return 2
+    elif "ETROC9ampHP"  in name : return 3
+    elif "ETROC11ampHP" in name : return 4
+    elif "UCSC16"       in name : return 5
+    else : return 0
+
+def cosmetics(graph,ucsc=False,cold=False):
+    name = graph.GetName()
+    index=colorindex(name)
+    if "UCSC" in name : ucsc=True
+    if "cold" in name : cold=True
+    graph.SetLineColor(colors[index])
+    graph.SetMarkerColor(colors[index])
     graph.SetMarkerSize(0.75)
     graph.SetMarkerStyle(20)
-    if ucsc:
-        graph.SetMarkerSize(1)
-        graph.SetMarkerStyle(29)
+    size, style = 1.0, 20
+    if ucsc : style += 1
+    if cold : style += 4  
+    graph.SetMarkerSize(size)
+    graph.SetMarkerStyle(style)
     return 
 
 
@@ -62,9 +76,7 @@ def plot_overlay(series, scans, labels, gr_name ):
     for i,scan in enumerate(scans):
         outfile = ROOT.TFile.Open("plots/scans/root/{}.root".format(scan))
         graph = outfile.Get("gr_{}_{}".format(scan,gr_name))
-        ucsc=0
-        if i==0: ucsc=1
-        cosmetics(graph,i,ucsc)
+        cosmetics(graph)
         mgraph.Add(graph)
         leg.AddEntry(graph, labels[i] ,"EP")
     
