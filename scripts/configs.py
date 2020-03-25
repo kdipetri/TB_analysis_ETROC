@@ -7,18 +7,8 @@ colors = setStyle()
 
 # default parameters
 ch_photek=3 # photek channel
-
-def charge_threshold(ch=None,cfg=None):
-    charge_thresh = 20 # fC
-    return charge_thresh
-
-def photek_min(cfg=None):
-    photek_min = 50 # mV
-    return photek_min
-
-def photek_max(cfg=None):
-    photek_max = 100 # mV
-    return photek_max
+minPh = 50 #mV 
+maxPh = 100 #mV
 
 def int_conf(cfg):
     global_conf = int(cfg.split("_")[1])
@@ -194,8 +184,6 @@ def get_mean_amplitude_channel(tree,cfg,ch,outfile):
    
     minAmp = 30 # for this plot only
     if cfg == "config_133" : minAmp = 50
-    minPh = photek_min(cfg)
-    maxPh = photek_max(cfg)
     histMax = 500
     if is_discrim(ch,cfg): histMax = 1000
     elif is_etroc_amp(ch,cfg) : histMax = 700
@@ -226,10 +214,9 @@ def get_charge_channel(tree,cfg,ch,outfile):
     if is_discrim(ch,cfg): return 
 
     minAmp = get_min_amp(ch,cfg)
-    minPh = photek_min(cfg)
-    maxPh = photek_max(cfg)
     transimpedance = 4700
-    if is_etroc_amp(ch,cfg): transimpedance = 33000 * 6.0/9.0 #SF to make charge match UCSC 
+    if is_etroc_amp(ch,cfg): transimpedance = 33000 # SF to make charge match UCSC 
+    #if is_etroc_amp(ch,cfg): transimpedance = 33000 * 6.0/9.0 #SF to make charge match UCSC 
 
     hist = ROOT.TH1D("h_charge","",50,0,100)
     # Qin = Qout / transimpedance 
@@ -300,8 +287,6 @@ def get_time_CFD(tree,cfg,ch,outfile):
 
     minAmp = get_min_amp(ch,cfg)
     maxAmp = get_max_amp(ch,cfg)
-    minPh = photek_min(cfg)
-    maxPh = photek_max(cfg)
     minT = get_min_time(ch,cfg)
     maxT = get_max_time(ch,cfg)
     
@@ -333,8 +318,6 @@ def get_time_walk(tree,ch,cfg,outfile):
     
     minAmp = get_min_amp(ch,cfg)
     maxAmp = get_max_amp(ch,cfg)
-    minPh = photek_min(cfg)
-    maxPh = photek_max(cfg)
     minT = get_min_time(ch,cfg)-1e-9
     maxT = get_max_time(ch,cfg)+1e-9
     mintot = 2e-9
@@ -355,8 +338,8 @@ def get_time_walk(tree,ch,cfg,outfile):
     hist.Draw("COLZ")
     c.Print("plots/configs/{}_ch{}_t0_v_tot.pdf".format(cfg,ch))
     
-    profile = hist.ProfileX()
-    spread  = hist.ProfileX("h_timewalkprof",1,-1,"s")
+    profile = hist.ProfileX("h_timewalkprof")
+    spread  = hist.ProfileX("h_timewalkspread",1,-1,"s")
     
     #fitmintot = mintot#1e-9
     #fitmaxtot = maxtot#10e-9
@@ -397,6 +380,83 @@ def get_time_walk(tree,ch,cfg,outfile):
     params = (f1.GetParameter(0), f1.GetParameter(1), f1.GetParameter(2), f1.GetParameter(3))
     return params 
 
+def get_time_TOT(tree,ch,cfg,fit_params,outfile):
+
+    minAmp = get_min_amp(ch,cfg)
+    maxAmp = get_max_amp(ch,cfg)
+    mint = -1e-9
+    maxt =  1e-9
+    mintot = 0.1e-9
+    maxtot = 11.1e-9
+    
+    (x0,x1,x2,x3) = fit_params
+    f_TOT = "{:e} + {:e}*tot_30[{}] + {:e}*tot_30[{}]**2 + {:e}*tot_30[{}]**3 - t0_30[{}] + LP2_20[3]".format(x0,x1,ch,x2,ch,x3,ch,ch) 
+    #print(f_TOT)
+    
+    # 2D hist to validate time walk correction
+    hist2D = ROOT.TH2D("h_timewalkcorr",";TOT [s];t-t_{ref} (TOT,corr) [s]",100,mintot,maxtot,100,mint,maxt)
+    
+    tree.Project("h_timewalkcorr","%s:tot_30[%i]"%(f_TOT,ch),"amp[%i]>%i && amp[%i]>%i && amp[%i]<%i && LP2_20[%i]!=0 && t0_30[%i]!=0"%(ch,minAmp,ch_photek,minPh,ch_photek,maxPh,ch_photek,ch),"COLZ")
+
+    c = ROOT.TCanvas()
+    hist2D.Draw("COLZ")
+    c.Print("plots/configs/{}_ch{}_t0_v_tot_corr.pdf".format(cfg,ch))
+    
+    # 1D hist for final corrected time resolution
+    hist = ROOT.TH1D("h_timeTOT",";t-t_{ref} (TOT) [s]",100,mint,maxt)
+    
+    tree.Project("h_timeTOT","%s"%(f_TOT),"amp[%i]>%i && amp[%i]>%i && amp[%i]<%i && LP2_20[%i]!=0 && t0_30[%i]!=0"%(ch,minAmp,ch_photek,minPh,ch_photek,maxPh,ch_photek,ch))
+    
+    f1 = ROOT.TF1("f_timeTOT","gaus",mint,maxt)
+    
+    hist.Fit(f1,"Q")
+    
+    hist.Draw()
+    f1.Draw("same")
+    c.Print("plots/configs/{}_ch{}_timeTOT.pdf".format(cfg,ch))
+
+    outfile.cd()
+    hist2D.Write()
+    hist.Write()
+    f1.Write()
+    
+    return  
+
+def get_tot_channel(tree,cfg,ch,outfile):
+
+    minAmp = get_min_amp(ch,cfg)
+
+    hist = ROOT.TH1D("h_tot","TOT [s]",150,0,10e-9)
+    tree.Project("h_tot","tot_30[%i]"%(ch),"amp[%i]>%i"%(ch,minAmp))  
+
+    c = ROOT.TCanvas()
+    hist.Draw()
+    outfile.cd()
+    hist.Write()
+    c.Print("plots/configs/{}_ch{}_risetime.pdf".format(cfg,ch))
+
+    return 
+
+def get_disc_eff(tree,ch,cfg,ch_amp,outfile):
+    minAmp = get_min_amp(ch_amp,cfg)
+
+    hist_den = ROOT.TH1D("h1","",2,-0.5,1.5)
+    hist_num = ROOT.TH1D("h2","",2,-0.5,1.5)
+    hist_den.Sumw2()
+    hist_num.Sumw2()
+    tree.Project("h1","amp[%i]>0"%ch,"amp[%i]>%f&&amp[%i]>%i"%(ch_amp,minAmp,ch_photek,minPh))
+    tree.Project("h2","amp[%i]>400"%ch,"amp[%i]>%f&&amp[%i]>%i"%(ch_amp,minAmp,ch_photek,minPh))
+
+    hist_eff = hist_num.Clone("h_disc_eff")
+    hist_eff.Divide(hist_num, hist_den,1,1,"B");
+    outfile.cd()
+    hist_eff.Write()
+       
+    #print(cfg,ch_amp)
+    #print("EFF ", hist_eff.GetBinContent(2))
+
+    return 
+    
 def get_config_results(cfg):
     
     # Open config file, get runs
@@ -418,7 +478,6 @@ def get_config_results(cfg):
 
         testfile = ROOT.TFile.Open(rootfile)
         if not testfile : print("MISSING : {} {}".format(cfg,run))
-    #tree.SetDirectory(0)
 
     # Generic plots per channel for now
     # May get more specific later (by ch and cfg)
@@ -430,7 +489,7 @@ def get_config_results(cfg):
         
         outname = "plots/configs/root/{}_ch{}.root".format(cfg,ch)
         outfile = ROOT.TFile.Open(outname,"RECREATE")
-        #print(outfile)
+        print(outfile)
     
         # Amplifier basics  
         get_mean_amplitude_channel(tree,cfg,ch,outfile)
@@ -440,10 +499,15 @@ def get_config_results(cfg):
         get_baseline_RMS_channel(tree,cfg,ch,outfile)
         get_time_CFD(tree,cfg,ch,outfile)
 
+        global_conf = int_conf(cfg) 
+        if global_conf > 146 : get_tot_channel(tree,cfg,ch,outfile)
+
         # Discriminator stuffs
         if is_discrim(ch,cfg): 
             ch_amp = get_amp_ch(ch,cfg) 
             totparams = get_time_walk(tree,ch,cfg,outfile)
+            get_time_TOT(tree,ch,cfg,totparams,outfile)
+            get_disc_eff(tree,ch,cfg,ch_amp,outfile)
         # TODO : 
         #   timewalk 
         #   TOT
@@ -461,8 +525,14 @@ def get_configurations():
      
         # for tmp debugging
         #if i > 0: break 
-        #if "156" not in line: continue
-        if "148_IBSel_0b111_RFSel_3_DAC_228" not in line: continue
+        #if "148_IBSel_0b111_RFSel_3_DAC_228" not in line: continue
+        global_conf = int_conf(line.strip()) 
+        #if global_conf > 139: continue # amplifiers only
+        #if global_conf < 146 : continue 
+        #if global_conf > 180 : continue
+        #if global_conf != 135 : continue
+        if "148_IBSel_0b111_RFSel_3_DAC_248" not in line : continue
+        #if "148_IBSel_0b111_RFSel_3_DAC_228" not in line: continue
 
         if "#" in line: continue
         cfg = line.strip()

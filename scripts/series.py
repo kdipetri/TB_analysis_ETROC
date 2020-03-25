@@ -66,7 +66,7 @@ def plot_overlay(series, scans, labels, gr_name ):
 
     mgraph = ROOT.TMultiGraph()
     left = True 
-    if "tresCFD_v_amp"  in gr_name : left = False 
+    if "tresCFD_v_charge"  in gr_name : left = False 
     if "tresCFD_v_bias" in gr_name : left = False 
         
     if left : leg = ROOT.TLegend(0.17,0.62,0.56,0.86)
@@ -106,12 +106,17 @@ def get_series_results(series):
 
     plot_overlay(series, scans, labels, "amp_v_bias")
     plot_overlay(series, scans, labels, "charge_v_bias")
+    plot_overlay(series, scans, labels, "chargePre_v_bias")
     plot_overlay(series, scans, labels, "slewrate_v_bias")
     plot_overlay(series, scans, labels, "risetime_v_bias")
     plot_overlay(series, scans, labels, "noiseRMS_v_bias")
     plot_overlay(series, scans, labels, "snr_v_bias")
     plot_overlay(series, scans, labels, "tresCFD_v_bias")
-    plot_overlay(series, scans, labels, "tresCFD_v_amp")
+    # v charge
+    plot_overlay(series, scans, labels, "tresCFD_v_charge")
+    plot_overlay(series, scans, labels, "slewrate_v_charge")
+    plot_overlay(series, scans, labels, "risetime_v_charge")
+    plot_overlay(series, scans, labels, "snr_v_charge")
 
     return 
 

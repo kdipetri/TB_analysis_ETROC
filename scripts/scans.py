@@ -40,6 +40,25 @@ def get_tres_CFD(f):
     res = 1e12*fit.GetParameter(2)
     err = 1e12*fit.GetParError(2)
     return res,err
+
+def get_tres_TOT(f):
+    fit = f.Get("f_timeTOT")
+    res = 1e12*fit.GetParameter(2)
+    err = 1e12*fit.GetParError(2)
+    return res,err
+
+def get_disc_eff(f):
+    hist = f.Get("h_disc_eff")
+    eff = 100*hist.GetBinContent(2)
+    #err = 100*hist.GetBinError(2)
+    err = 0.1 #tmp annoyingness
+    return eff,err
+
+def get_slew_rate(f):
+    hist = f.Get("h_slewrate")
+    rate = 1e-9 * hist.GetMean()
+    err = 1e-9* hist.GetMeanError()
+    return rate,err
    
 def axis(name):  
     if   "amp"       in name : return "MPV amplitude [mV]" 
@@ -48,7 +67,10 @@ def axis(name):
     elif "noise"     in name : return "baseline RMS [mV]" 
     elif "snr"       in name : return "signal to noise ratio" 
     elif "tresCFD"   in name : return "time resolution (CFD) [ps]"
+    elif "tresTOT"   in name : return "time resolution (TOT) [ps]"
     elif "charge"    in name : return "integrated charge [fC]"
+    elif "dac"       in name : return "DAC"
+    elif "effDIS"    in name : return "Eff"
     elif "bias"      in name : return "bias voltage [V]"
     else : return ""
 
@@ -93,22 +115,29 @@ def get_scan_results(scan):
     configs = []
     biases = []
     temps = []
-
+    dacs = []
     scan_file = open("scans/{}.txt".format(scan),"r")
     for line in scan_file: 
         if "#" in line: continue
 
-        configs.append(line.split()[0])
+        config = line.split()[0]
+        configs.append(config)
         biases .append(int(line.split()[1]))
         temps  .append(int(line.split()[2]))
         ch = line.split()[3]
+        if "DAC" in config: 
+            dacs.append(int(config.split("_")[6])) 
 
     scan_file.close()
     bias_errs = [0.1 for i in biases]
+    dac_errs = [0.01 for i in dacs]
 
     # Get measurements per config, save to array
     mean_amplitudes=[]
     err_amplitudes=[]
+
+    mean_charges_pre=[]
+    err_charges_pre=[]
 
     mean_charges=[]
     err_charges=[]
@@ -131,40 +160,70 @@ def get_scan_results(scan):
     tres_CFDs=[]
     err_tres_CFDs=[]
 
+    tres_TOTs=[]
+    err_tres_TOTs=[]
+    
+    eff_discs=[]
+    err_effs_discs=[]
+
+    mean_TOTs=[]
+    err_TOTs=[]
+
     for i,cfg in enumerate(configs):
         
         rootfile = ROOT.TFile.Open("plots/configs/root/config_{}_ch{}.root".format(cfg,ch))
         if not rootfile : print("MISSING : config_{}_ch{}".format(cfg,ch))
         print(cfg)
 
+
+        #print(biases[i],mean_amplitude,tres_CFD)
         mean_amplitude, err_amplitude  = get_amplitude(rootfile)
         mean_amplitudes.append(mean_amplitude) 
         err_amplitudes .append(err_amplitude)
 
-        mean_charge, err_charge  = get_charge(rootfile)
-        mean_charges.append(mean_charge)
-        err_charges .append(err_charge)
-
-        mean_rise, err_rise  = get_risetime(rootfile)
-        mean_rises.append(mean_rise)
-        err_rises .append(err_rise)
-
-        mean_slew, err_slew  = get_slew_rate(rootfile)
-        mean_slews.append(mean_slew)
-        err_slews .append(err_slew)
-
         mean_noise, err_noise  = get_baseline_RMS(rootfile)
         mean_noises.append(mean_noise)
         err_noises .append(err_noise)
-   
-        mean_snrs.append(mean_amplitude/mean_noise)
-        err_snrs.append(err_amplitude/mean_noise)
+        if "dis" in scan:  
+            tres_TOT, err_tres_TOT = get_tres_TOT(rootfile)
+            tres_TOTs.append(tres_TOT)
+            err_tres_TOTs.append(err_tres_TOT)
+            
+            eff_disc, err_eff_disc = get_disc_eff(rootfile) 
+            eff_discs.append(eff_disc)
+            err_effs_discs.append(err_eff_disc)
 
-        tres_CFD, err_tres_CFD = get_tres_CFD(rootfile)
-        tres_CFDs.append(tres_CFD)
-        err_tres_CFDs.append(err_tres_CFD)
+            #mean_TOT, err_TOT = get_TOT(rootfile)
+            #mean_TOTs.append(mean_TOT)
+            #err_TOTs.append(err_TOT)
 
-        #print(biases[i],mean_amplitude,tres_CFD)
+            #print(tres_TOT, err_tres_TOT, eff_disc, err_eff_disc)
+        else : 
+            
+            mean_charge_pre, err_charge_pre  = get_charge(rootfile)
+            mean_charges_pre.append(mean_charge_pre)
+            err_charges_pre .append(err_charge_pre)
+
+            sf = 1.0 
+            if "UCSC" in scan: sf = 6.0/9.0
+            mean_charges.append(mean_charge_pre * sf)
+            err_charges .append(err_charge_pre * sf)
+
+            mean_rise, err_rise  = get_risetime(rootfile)
+            mean_rises.append(mean_rise)
+            err_rises .append(err_rise)
+
+            mean_slew, err_slew  = get_slew_rate(rootfile)
+            mean_slews.append(mean_slew)
+            err_slews .append(err_slew)
+
+            mean_snrs.append(mean_amplitude/mean_noise)
+            err_snrs.append(err_amplitude/mean_noise)
+
+            tres_CFD, err_tres_CFD = get_tres_CFD(rootfile)
+            tres_CFDs.append(tres_CFD)
+            err_tres_CFDs.append(err_tres_CFD)
+            
 
         rootfile.Close()
 
@@ -177,15 +236,25 @@ def get_scan_results(scan):
     # Make Graphs in functions, print and save in rootfiles
     # graph(outfile,x,xerr,y,yerr,name)
     pre="gr_{}_".format(scan)
-    graph(outfile ,biases ,bias_errs ,mean_amplitudes,err_amplitudes ,pre+"amp_v_bias")
-    graph(outfile ,biases ,bias_errs ,mean_charges   ,err_charges    ,pre+"charge_v_bias")
-    graph(outfile ,biases ,bias_errs ,mean_slews     ,err_slews      ,pre+"slewrate_v_bias")
-    graph(outfile ,biases ,bias_errs ,mean_rises     ,err_rises      ,pre+"risetime_v_bias")
-    graph(outfile ,biases ,bias_errs ,mean_noises    ,err_noises     ,pre+"noiseRMS_v_bias")
-    graph(outfile ,biases ,bias_errs ,mean_snrs      ,err_snrs       ,pre+"snr_v_bias")
-    graph(outfile ,biases ,bias_errs ,tres_CFDs      ,err_tres_CFDs  ,pre+"tresCFD_v_bias")
-    # versus amplitude/charge
-    graph(outfile ,mean_amplitudes ,err_amplitudes ,tres_CFDs ,err_tres_CFDs ,pre+"tresCFD_v_amp")
+    if "dac" in scan: 
+        graph(outfile ,dacs ,dac_errs ,tres_TOTs    ,err_tres_TOTs  ,pre+"tresTOT_v_dac")
+        graph(outfile ,dacs ,dac_errs ,eff_discs    ,err_effs_discs ,pre+"effDISC_v_dac")
+        #graph(outfile ,dacs ,dac_errs ,mean_TOTs    ,err_TOTs       ,pre+"meanTOT_v_dac")
+    else : 
+        graph(outfile ,biases ,bias_errs ,mean_amplitudes,err_amplitudes ,pre+"amp_v_bias")
+        graph(outfile ,biases ,bias_errs ,mean_noises    ,err_noises     ,pre+"noiseRMS_v_bias")
+        if "dis" not in scan: 
+            graph(outfile,biases,bias_errs,mean_charges_pre,err_charges_pre,pre+"chargePre_v_bias")
+            graph(outfile,biases,bias_errs,mean_charges    ,err_charges    ,pre+"charge_v_bias")
+            graph(outfile,biases,bias_errs,mean_slews      ,err_slews      ,pre+"slewrate_v_bias")
+            graph(outfile,biases,bias_errs,mean_rises      ,err_rises      ,pre+"risetime_v_bias")
+            graph(outfile,biases,bias_errs,mean_snrs       ,err_snrs       ,pre+"snr_v_bias")
+            graph(outfile,biases,bias_errs,tres_CFDs       ,err_tres_CFDs  ,pre+"tresCFD_v_bias")
+            # versus amplitude/charge
+            graph(outfile,mean_charges,err_charges,mean_slews,err_slews    ,pre+"slewrate_v_charge")
+            graph(outfile,mean_charges,err_charges,mean_rises,err_rises    ,pre+"risetime_v_charge")
+            graph(outfile,mean_charges,err_charges,mean_snrs ,err_snrs     ,pre+"snr_v_charge")
+            graph(outfile,mean_charges,err_charges,tres_CFDs ,err_tres_CFDs,pre+"tresCFD_v_charge")
     outfile.Close()
 
 def get_scans():

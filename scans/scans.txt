@@ -13,3 +13,10 @@ scan_ETROC9ampHPcold_bias
 #scan_ETROC9ampLPtest2_bias
 #scan_ETROC11ampHPtest2_bias
 #scan_ETROC11ampLPtest2_bias
+scan_ETROC11disHP_bias
+scan_ETROC11disLP_bias
+scan_ETROC9disHP_bias
+scan_ETROC9disLP_bias
+#
+scan_ETROC9disLP_dac
+scan_ETROC11disLP_dac
