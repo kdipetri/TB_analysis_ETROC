@@ -3,9 +3,9 @@
 scan_UCSC14_bias; UCSC #14, 20C; CMS 50x500 P2
 #scan_UCSC16_bias; UCSC #16, 20C; ATLAS 50x500 MW 2,
 scan_ETROC9ampLP_bias; ETROC #9, low power, 20C
-scan_ETROC11ampLP_bias; ETROC #11, low power, 20 C 
+scan_ETROC11ampLP_bias; ETROC #11, low power, 20C 
 scan_ETROC9ampHP_bias; ETROC #9, high power, 20C
-scan_ETROC11ampHP_bias; ETROC #11, high power, 20 C 
+scan_ETROC11ampHP_bias; ETROC #11, high power, 20C 
 scan_UCSC14cold_bias; UCSC #14, -20C; ATLAS 50x500 MW 2,
 scan_ETROC9ampLPcold_bias; ETROC #9, low power, -20C
 scan_ETROC9ampHPcold_bias; ETROC #9, high power, -20C

@@ -21,10 +21,11 @@ def axis(name):
     elif "snr"       in name : return "signal to noise ratio" 
     elif "tresCFD"   in name : return "time resolution (CFD) [ps]"
     elif "tresTOT"   in name : return "time resolution (TOT) [ps]"
-    elif "meanTOT"   in name : return "mean TOT [ns]"
+    elif "meanTOT"   in name : return "mean discriminator TOT [ns]"
+    elif "meanAmpTOT"   in name : return "mean amplifier TOT [ns]"
     elif "charge"    in name : return "MPV collected charge [fC]"
     elif "dac"       in name : return "DAC threshold"
-    elif "effDIS"    in name : return "Eff"
+    elif "effDIS"    in name : return "discriminator efficiency"
     elif "amp"       in name : return "MPV amplitude [mV]" 
     elif "bias"      in name : return "bias voltage [V]"
     else : return ""
@@ -43,14 +44,19 @@ def colorindex(name):
     elif "ETROC11ampLP" in name : return 2
     elif "ETROC9ampHP"  in name : return 3
     elif "ETROC11ampHP" in name : return 4
+    elif "ETROC9disLP"  in name : return 1
+    elif "ETROC11disLP" in name : return 2
+    elif "ETROC9disHP"  in name : return 3
+    elif "ETROC11disHP" in name : return 4
     elif "UCSC16"       in name : return 5
     else : return 0
 
-def cosmetics(graph,ucsc=False,cold=False):
+def cosmetics(graph,ucsc=False,cold=False,dis=False):
     name = graph.GetName()
     index=colorindex(name)
     if "UCSC" in name : ucsc=True
     if "cold" in name : cold=True
+    if "dis" in name: dis=True
     graph.SetLineColor(colors[index])
     graph.SetMarkerColor(colors[index])
     graph.SetMarkerSize(0.75)
@@ -58,6 +64,7 @@ def cosmetics(graph,ucsc=False,cold=False):
     size, style = 1.0, 20
     if ucsc : style += 1
     if cold : style += 4  
+    if dis : style+=1
     graph.SetMarkerSize(size)
     graph.SetMarkerStyle(style)
     return 
@@ -68,6 +75,10 @@ def adjust(mgraph,gr_name):
     if "slewrate" in gr_name: mgraph.GetHistogram().GetYaxis().SetRangeUser(40,640)
     if "snr"      in gr_name: mgraph.GetHistogram().GetYaxis().SetRangeUser(20,180)
     if "tresCFD_v_thJitter" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(25,65)
+    if "meanAmpTOT_" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(2,5)
+    if "v_meanTOT" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(2,6.5)
+    if "v_tresTOT" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(40,75)
+    if "effDISC" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(0,130)
 
 
 def plot_overlay(series, scans, labels, gr_name ):
@@ -78,13 +89,16 @@ def plot_overlay(series, scans, labels, gr_name ):
 
     mgraph = ROOT.TMultiGraph()
     left = True 
-    if "tresCFD_v_charge"  in gr_name : left = False 
-    if "tresCFD_v_bias" in gr_name : left = False 
-    if "noiseRMS_v_bias" in gr_name : left = False
-    if "thJitter_v" in gr_name : left = False
+    if "tresTOT_v_charge"   in gr_name : left = False 
+    if "tresTOT_v_bias"     in gr_name : left = False 
+    if "tresCFD_v_charge"   in gr_name : left = False 
+    if "tresCFD_v_bias"     in gr_name : left = False 
+    if "noiseRMS_v_bias"    in gr_name : left = False
+    if "thJitter_v"         in gr_name : left = False
         
-    if left : leg = ROOT.TLegend(0.17,0.61,0.56,0.88)
-    else    : leg = ROOT.TLegend(0.5,0.61,0.85,0.88)
+    if "dac" in series : leg = ROOT.TLegend(0.17,0.81,0.85,0.88)
+    elif left : leg = ROOT.TLegend(0.17,0.61,0.56,0.88)
+    else      : leg = ROOT.TLegend(0.5,0.61,0.85,0.88)
     leg.SetMargin(0.15)
 
     for i,scan in enumerate(scans):
@@ -119,24 +133,49 @@ def get_series_results(series):
 
     series_file.close()
 
-    # v bias
-    plot_overlay(series, scans, labels, "amp_v_bias")
-    plot_overlay(series, scans, labels, "charge_v_bias")
-    plot_overlay(series, scans, labels, "chargePre_v_bias")
-    plot_overlay(series, scans, labels, "slewrate_v_bias")
-    plot_overlay(series, scans, labels, "risetime_v_bias")
-    plot_overlay(series, scans, labels, "noiseRMS_v_bias")
-    plot_overlay(series, scans, labels, "snr_v_bias")
-    plot_overlay(series, scans, labels, "tresCFD_v_bias")
-    plot_overlay(series, scans, labels, "thJitter_v_bias")
-    # v charge
-    plot_overlay(series, scans, labels, "tresCFD_v_charge")
-    plot_overlay(series, scans, labels, "thJitter_v_charge")
-    plot_overlay(series, scans, labels, "slewrate_v_charge")
-    plot_overlay(series, scans, labels, "risetime_v_charge")
-    plot_overlay(series, scans, labels, "snr_v_charge")
-    # test
-    plot_overlay(series, scans, labels, "tresCFD_v_thJitter")
+    
+    if "dac" in series: 
+        plot_overlay(series, scans, labels, "tresTOT_v_dac")
+        plot_overlay(series, scans, labels, "meanTOT_v_dac")
+        plot_overlay(series, scans, labels, "effDISC_v_dac")
+    elif "discriminator" in series: 
+        plot_overlay(series, scans, labels, "tresTOT_v_bias")
+        # plots versus bias
+        plot_overlay(series, scans, labels, "noiseRMS_v_bias")
+        plot_overlay(series, scans, labels, "tresTOT_v_bias")
+        plot_overlay(series, scans, labels, "effDISC_v_bias")
+        plot_overlay(series, scans, labels, "meanTOT_v_bias")
+        plot_overlay(series, scans, labels, "meanAmpTOT_v_bias")
+        # plots versus charge
+        plot_overlay(series, scans, labels, "tresTOT_v_charge")
+        plot_overlay(series, scans, labels, "effDISC_v_charge")
+        plot_overlay(series, scans, labels, "meanTOT_v_charge")
+        plot_overlay(series, scans, labels, "meanAmpTOT_v_charge")
+        # plots versus amplifier
+        plot_overlay(series, scans, labels, "tresTOT_v_tresCFD")
+        plot_overlay(series, scans, labels, "meanTOT_v_meanAmpTOT")
+        #plot_overlay(series, scans, labels, "tresTOT_v_bias")
+
+    else : #amplifer 
+        # v bias
+        plot_overlay(series, scans, labels, "amp_v_bias")
+        plot_overlay(series, scans, labels, "charge_v_bias")
+        plot_overlay(series, scans, labels, "chargePre_v_bias")
+        plot_overlay(series, scans, labels, "slewrate_v_bias")
+        plot_overlay(series, scans, labels, "risetime_v_bias")
+        plot_overlay(series, scans, labels, "noiseRMS_v_bias")
+        plot_overlay(series, scans, labels, "snr_v_bias")
+        plot_overlay(series, scans, labels, "tresCFD_v_bias")
+        plot_overlay(series, scans, labels, "thJitter_v_bias")
+        # v charge
+        plot_overlay(series, scans, labels, "tresCFD_v_charge")
+        plot_overlay(series, scans, labels, "thJitter_v_charge")
+        plot_overlay(series, scans, labels, "slewrate_v_charge")
+        plot_overlay(series, scans, labels, "risetime_v_charge")
+        plot_overlay(series, scans, labels, "snr_v_charge")
+        # test
+        plot_overlay(series, scans, labels, "tresCFD_v_thJitter")
+        plot_overlay(series, scans, labels, "charge_v_biasShift")
 
     return 
 

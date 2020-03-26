@@ -1,0 +1,2 @@
+scan_ETROC11disLP_dac; ETROC #11, 200 V, low power, baseline 213 DAC
+scan_ETROC9disLP_dac; ETROC #9, 220 V, low power, baseline 206 DAC

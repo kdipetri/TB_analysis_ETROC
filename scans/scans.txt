@@ -17,6 +17,8 @@ scan_ETROC11disHP_bias
 scan_ETROC11disLP_bias
 scan_ETROC9disHP_bias
 scan_ETROC9disLP_bias
+scan_ETROC9disLPcold_bias
+scan_ETROC9disHPcold_bias
 #
 scan_ETROC9disLP_dac
 scan_ETROC11disLP_dac

@@ -1,0 +1,12 @@
+#scan; notes
+#ETROC #9 ATLAS 90x500 MW W2 P5 
+#scan_ETROC9ampLP_bias; ETROC #9, low power, 20C
+#scan_ETROC9ampHP_bias; ETROC #9, high power, 20C
+#scan_ETROC11ampLP_bias; ETROC #11, low power, 20C 
+#scan_ETROC11ampHP_bias; ETROC #11, high power, 20C 
+scan_ETROC9disLP_bias; ETROC #9, low power, 20C
+scan_ETROC9disHP_bias; ETROC #9, high power, 20C
+scan_ETROC11disLP_bias; ETROC #11, low power, 20C
+scan_ETROC11disHP_bias; ETROC #11, high power, 20C
+scan_ETROC9disLPcold_bias; ETROC #9, low power, -20C
+scan_ETROC9disHPcold_bias; ETROC #9, high power, -20C

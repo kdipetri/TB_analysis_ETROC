@@ -1,2 +1,4 @@
 series_amplifier
 series_ETROCamplifier
+series_ETROCdiscriminator
+series_ETROCdac
