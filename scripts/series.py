@@ -14,13 +14,18 @@ colors = [1,2001,2002,2003,2004,2005,2006,6,2,3,4,6,7,5,1,8,9,29,38,46,1,2001,20
 #colors = setStyle()
 
 def axis(name):  
-    if   "amp"       in name : return "MPV amplitude [mV]" 
+    if   "thJitter"  in name : return "expected jitter [ps]"
     elif "slewrate"  in name : return "mean slew rate [mV/ns]" 
     elif "risetime"  in name : return "mean risetime [ns]" 
     elif "noise"     in name : return "baseline RMS [mV]" 
     elif "snr"       in name : return "signal to noise ratio" 
     elif "tresCFD"   in name : return "time resolution (CFD) [ps]"
-    elif "charge"    in name : return "integrated charge [fC]"
+    elif "tresTOT"   in name : return "time resolution (TOT) [ps]"
+    elif "meanTOT"   in name : return "mean TOT [ns]"
+    elif "charge"    in name : return "MPV collected charge [fC]"
+    elif "dac"       in name : return "DAC threshold"
+    elif "effDIS"    in name : return "Eff"
+    elif "amp"       in name : return "MPV amplitude [mV]" 
     elif "bias"      in name : return "bias voltage [V]"
     else : return ""
 
@@ -57,6 +62,13 @@ def cosmetics(graph,ucsc=False,cold=False):
     graph.SetMarkerStyle(style)
     return 
 
+def adjust(mgraph,gr_name):
+    if "noiseRMS" in gr_name: mgraph.GetHistogram().GetYaxis().SetRangeUser(1.2,4.2)
+    if "risetime" in gr_name: mgraph.GetHistogram().GetYaxis().SetRangeUser(0.5,2.1)
+    if "slewrate" in gr_name: mgraph.GetHistogram().GetYaxis().SetRangeUser(40,640)
+    if "snr"      in gr_name: mgraph.GetHistogram().GetYaxis().SetRangeUser(20,180)
+    if "tresCFD_v_thJitter" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(25,65)
+
 
 def plot_overlay(series, scans, labels, gr_name ):
 
@@ -68,9 +80,11 @@ def plot_overlay(series, scans, labels, gr_name ):
     left = True 
     if "tresCFD_v_charge"  in gr_name : left = False 
     if "tresCFD_v_bias" in gr_name : left = False 
+    if "noiseRMS_v_bias" in gr_name : left = False
+    if "thJitter_v" in gr_name : left = False
         
-    if left : leg = ROOT.TLegend(0.17,0.62,0.56,0.86)
-    else    : leg = ROOT.TLegend(0.5,0.62,0.85,0.86)
+    if left : leg = ROOT.TLegend(0.17,0.61,0.56,0.88)
+    else    : leg = ROOT.TLegend(0.5,0.61,0.85,0.88)
     leg.SetMargin(0.15)
 
     for i,scan in enumerate(scans):
@@ -82,6 +96,7 @@ def plot_overlay(series, scans, labels, gr_name ):
     
     mgraph.SetTitle("; %s; %s"%(xaxis(gr_name),yaxis(gr_name)))
     mgraph.Draw("AEP")
+    adjust(mgraph,gr_name)
     leg.Draw() 
     c.Print("plots/series/{}_{}.pdf".format(series,gr_name))
     
@@ -104,6 +119,7 @@ def get_series_results(series):
 
     series_file.close()
 
+    # v bias
     plot_overlay(series, scans, labels, "amp_v_bias")
     plot_overlay(series, scans, labels, "charge_v_bias")
     plot_overlay(series, scans, labels, "chargePre_v_bias")
@@ -112,11 +128,15 @@ def get_series_results(series):
     plot_overlay(series, scans, labels, "noiseRMS_v_bias")
     plot_overlay(series, scans, labels, "snr_v_bias")
     plot_overlay(series, scans, labels, "tresCFD_v_bias")
+    plot_overlay(series, scans, labels, "thJitter_v_bias")
     # v charge
     plot_overlay(series, scans, labels, "tresCFD_v_charge")
+    plot_overlay(series, scans, labels, "thJitter_v_charge")
     plot_overlay(series, scans, labels, "slewrate_v_charge")
     plot_overlay(series, scans, labels, "risetime_v_charge")
     plot_overlay(series, scans, labels, "snr_v_charge")
+    # test
+    plot_overlay(series, scans, labels, "tresCFD_v_thJitter")
 
     return 
 

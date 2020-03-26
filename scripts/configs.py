@@ -531,7 +531,8 @@ def get_configurations():
         #if global_conf < 146 : continue 
         #if global_conf > 180 : continue
         #if global_conf != 135 : continue
-        if "148_IBSel_0b111_RFSel_3_DAC_248" not in line : continue
+        if "185_IBSel_0b111_RFSel_3_DAC_318" not in line : continue
+        #if "148_IBSel_0b111_RFSel_3_DAC_248" not in line : continue
         #if "148_IBSel_0b111_RFSel_3_DAC_228" not in line: continue
 
         if "#" in line: continue

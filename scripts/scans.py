@@ -61,16 +61,18 @@ def get_slew_rate(f):
     return rate,err
    
 def axis(name):  
-    if   "amp"       in name : return "MPV amplitude [mV]" 
+    if   "thJitter"  in name : return "expected jitter [ps]"
     elif "slewrate"  in name : return "mean slew rate [mV/ns]" 
     elif "risetime"  in name : return "mean risetime [ns]" 
     elif "noise"     in name : return "baseline RMS [mV]" 
     elif "snr"       in name : return "signal to noise ratio" 
     elif "tresCFD"   in name : return "time resolution (CFD) [ps]"
     elif "tresTOT"   in name : return "time resolution (TOT) [ps]"
-    elif "charge"    in name : return "integrated charge [fC]"
-    elif "dac"       in name : return "DAC"
+    elif "meanTOT"   in name : return "mean TOT [ns]"
+    elif "charge"    in name : return "MPV collected charge [fC]"
+    elif "dac"       in name : return "DAC threshold"
     elif "effDIS"    in name : return "Eff"
+    elif "amp"       in name : return "MPV amplitude [mV]" 
     elif "bias"      in name : return "bias voltage [V]"
     else : return ""
 
@@ -154,8 +156,8 @@ def get_scan_results(scan):
     mean_snrs=[]
     err_snrs=[]
 
-    mean_snrs=[]
-    err_snrs=[]
+    exp_jitters=[]
+    err_jitters=[]
 
     tres_CFDs=[]
     err_tres_CFDs=[]
@@ -223,6 +225,12 @@ def get_scan_results(scan):
             tres_CFD, err_tres_CFD = get_tres_CFD(rootfile)
             tres_CFDs.append(tres_CFD)
             err_tres_CFDs.append(err_tres_CFD)
+    
+            exp_jitter = mean_noise/mean_slew * 1000# noise in mV, slew in mV/ns, convert ns to ps 
+            err_jitter = err_noise/mean_slew *100 # bs
+            exp_jitters.append(exp_jitter)
+            err_jitters.append(err_jitter)
+            
             
 
         rootfile.Close()
@@ -246,15 +254,19 @@ def get_scan_results(scan):
         if "dis" not in scan: 
             graph(outfile,biases,bias_errs,mean_charges_pre,err_charges_pre,pre+"chargePre_v_bias")
             graph(outfile,biases,bias_errs,mean_charges    ,err_charges    ,pre+"charge_v_bias")
+            graph(outfile,biases,bias_errs,mean_snrs       ,err_snrs       ,pre+"snr_v_bias")
             graph(outfile,biases,bias_errs,mean_slews      ,err_slews      ,pre+"slewrate_v_bias")
             graph(outfile,biases,bias_errs,mean_rises      ,err_rises      ,pre+"risetime_v_bias")
-            graph(outfile,biases,bias_errs,mean_snrs       ,err_snrs       ,pre+"snr_v_bias")
             graph(outfile,biases,bias_errs,tres_CFDs       ,err_tres_CFDs  ,pre+"tresCFD_v_bias")
+            graph(outfile,biases,bias_errs,exp_jitters     ,err_jitters    ,pre+"thJitter_v_bias")
             # versus amplitude/charge
+            graph(outfile,mean_charges,err_charges,mean_snrs ,err_snrs     ,pre+"snr_v_charge")
             graph(outfile,mean_charges,err_charges,mean_slews,err_slews    ,pre+"slewrate_v_charge")
             graph(outfile,mean_charges,err_charges,mean_rises,err_rises    ,pre+"risetime_v_charge")
-            graph(outfile,mean_charges,err_charges,mean_snrs ,err_snrs     ,pre+"snr_v_charge")
             graph(outfile,mean_charges,err_charges,tres_CFDs ,err_tres_CFDs,pre+"tresCFD_v_charge")
+            graph(outfile,mean_charges,err_charges,exp_jitters,err_jitters ,pre+"thJitter_v_charge")
+            # cross check
+            graph(outfile,exp_jitters,err_jitters,tres_CFDs ,err_tres_CFDs,pre+"tresCFD_v_thJitter")
     outfile.Close()
 
 def get_scans():
