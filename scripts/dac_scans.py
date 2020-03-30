@@ -6,7 +6,8 @@ import ROOT
 colors = setStyle()
    
 def axis(name):  
-    if "dac" in name: return "DAC threshold"
+    if "reldac" in name: return "DAC threshold - baseline"
+    elif "dac" in name: return "DAC threshold"
     elif "tres" in name : return "time resolution (TOT) [ps]"
     elif "eff" in name : return "efficiency"
     else : return ""
@@ -30,8 +31,10 @@ def cosmetics(graph,colorindex,tb=False):
 def plot_overlay( scan ):
 
     outfile = ROOT.TFile.Open("plots/scans/root/{}.root".format(scan))
-    gr_tres  = outfile.Get("gr_{}_tresTOT_v_dac".format(scan))
-    gr_eff   = outfile.Get("gr_{}_effDISC_v_dac".format(scan))
+    #gr_tres  = outfile.Get("gr_{}_tresTOT_v_dac".format(scan))
+    #gr_eff   = outfile.Get("gr_{}_effDISC_v_dac".format(scan))
+    gr_tres  = outfile.Get("gr_{}_tresTOT_v_reldac".format(scan))
+    gr_eff   = outfile.Get("gr_{}_effDISC_v_reldac".format(scan))
 
     gr_tres.SetLineColor(ROOT.kRed+1)
     gr_tres.SetMarkerColor(ROOT.kRed+1)
@@ -55,9 +58,11 @@ def plot_overlay( scan ):
     mgraph = ROOT.TMultiGraph()
     mgraph.Add(gr_tres)
     mgraph.Add(gr_eff)
-    mgraph.SetTitle(";DAC threshold;")
+    mgraph.SetTitle(";DAC threshold - baseline;")
+    #mgraph.SetTitle(";DAC threshold;")
     mgraph.Draw("AELP")
     mgraph.GetHistogram().GetYaxis().SetRangeUser(0.,200);
+    mgraph.GetHistogram().GetXaxis().SetRangeUser(0.,130);
 
     leg = ROOT.TLegend(0.2,0.75,0.85,0.89)
     leg.SetMargin(0.15)

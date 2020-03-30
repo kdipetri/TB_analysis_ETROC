@@ -19,8 +19,15 @@ def axis(name):
     elif "risetime"  in name : return "mean risetime [ns]" 
     elif "noise"     in name : return "baseline RMS [mV]" 
     elif "snr"       in name : return "signal to noise ratio" 
-    elif "tresCFD"   in name : return "time resolution (CFD) [ps]"
-    elif "tresTOT"   in name : return "time resolution (TOT) [ps]"
+    elif "tresCFD"   in name : return "amplifier time res. (CFD) [ps]"
+    elif "tresTOT"   in name : return "discrim. time res. (TOT) [ps]"
+    elif "tresAmpTOT" in name: return "amplifier time res. (TOT) [ps]"
+    elif "contribTOT" in name: return "TOT method contrib. [ps]"
+    elif "contribDisc" in name: return "discrim. contrib.  [ps]"
+    elif "contribTotal" in name: return "total discrim. contrib.[ps]"
+    #elif "contribTOT" in name: return "#sqrt{ #sigma_{t}(amp. TOT)^2 - #sigma_{t}(amp. CFD)^2 } [ps]"
+    #elif "contribDisc" in name: return "#sqrt{ #sigma_{t}(dis. TOT)^2 - #sigma_{t}(amp. TOT)^2 } [ps]"
+    #elif "contribTotal" in name: return "#sqrt{ #sigma_{t}(dis. TOT)^2 - #sigma_{t}(amp. CFD)^2 } [ps]"
     elif "meanTOT"   in name : return "mean discriminator TOT [ns]"
     elif "meanAmpTOT"   in name : return "mean amplifier TOT [ns]"
     elif "charge"    in name : return "MPV collected charge [fC]"
@@ -75,10 +82,13 @@ def adjust(mgraph,gr_name):
     if "slewrate" in gr_name: mgraph.GetHistogram().GetYaxis().SetRangeUser(40,640)
     if "snr"      in gr_name: mgraph.GetHistogram().GetYaxis().SetRangeUser(20,180)
     if "tresCFD_v_thJitter" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(25,65)
-    if "meanAmpTOT_" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(2,5)
-    if "v_meanTOT" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(2,6.5)
-    if "v_tresTOT" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(40,75)
+    if "meanAmpTOT_" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(2,8)
+    if "meanTOT_" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(2,8)
+    if "tresTOT_v" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(40,75)
     if "effDISC" in gr_name : mgraph.GetHistogram().GetYaxis().SetRangeUser(0,130)
+    if "contrib" in gr_name : 
+        mgraph.GetHistogram().GetYaxis().SetRangeUser(0,60)
+        mgraph.GetHistogram().GetYaxis().SetNdivisions(505)
 
 
 def plot_overlay(series, scans, labels, gr_name ):
@@ -91,6 +101,7 @@ def plot_overlay(series, scans, labels, gr_name ):
     left = True 
     if "tresTOT_v_charge"   in gr_name : left = False 
     if "tresTOT_v_bias"     in gr_name : left = False 
+    if "tresTOT_v_meanTOT"  in gr_name : left = False 
     if "tresCFD_v_charge"   in gr_name : left = False 
     if "tresCFD_v_bias"     in gr_name : left = False 
     if "noiseRMS_v_bias"    in gr_name : left = False
@@ -109,7 +120,7 @@ def plot_overlay(series, scans, labels, gr_name ):
         leg.AddEntry(graph, labels[i] ,"EP")
     
     mgraph.SetTitle("; %s; %s"%(xaxis(gr_name),yaxis(gr_name)))
-    mgraph.Draw("AEP")
+    mgraph.Draw("ALEP")
     adjust(mgraph,gr_name)
     leg.Draw() 
     c.Print("plots/series/{}_{}.pdf".format(series,gr_name))
@@ -140,22 +151,39 @@ def get_series_results(series):
         plot_overlay(series, scans, labels, "effDISC_v_dac")
     elif "discriminator" in series: 
         plot_overlay(series, scans, labels, "tresTOT_v_bias")
+        plot_overlay(series, scans, labels, "tresTOT_v_meanTOT")
         # plots versus bias
         plot_overlay(series, scans, labels, "noiseRMS_v_bias")
         plot_overlay(series, scans, labels, "tresTOT_v_bias")
+        plot_overlay(series, scans, labels, "tresAmpTOT_v_bias")
         plot_overlay(series, scans, labels, "effDISC_v_bias")
         plot_overlay(series, scans, labels, "meanTOT_v_bias")
         plot_overlay(series, scans, labels, "meanAmpTOT_v_bias")
         # plots versus charge
         plot_overlay(series, scans, labels, "tresTOT_v_charge")
+        plot_overlay(series, scans, labels, "tresAmpTOT_v_charge")
         plot_overlay(series, scans, labels, "effDISC_v_charge")
         plot_overlay(series, scans, labels, "meanTOT_v_charge")
         plot_overlay(series, scans, labels, "meanAmpTOT_v_charge")
         # plots versus amplifier
         plot_overlay(series, scans, labels, "tresTOT_v_tresCFD")
+        plot_overlay(series, scans, labels, "tresAmpTOT_v_tresCFD")
+        plot_overlay(series, scans, labels, "tresTOT_v_tresAmpTOT")
         plot_overlay(series, scans, labels, "meanTOT_v_meanAmpTOT")
-        #plot_overlay(series, scans, labels, "tresTOT_v_bias")
+        plot_overlay(series, scans, labels, "meanTOT_v_amp")
+        plot_overlay(series, scans, labels, "meanAmpTOT_v_amp")
+        # contributions
+        plot_overlay(series, scans, labels, "contribTotal_v_amp")
+        plot_overlay(series, scans, labels, "contribTOT_v_amp")
+        plot_overlay(series, scans, labels, "contribDiscs_v_amp")
+        plot_overlay(series, scans, labels, "contribTotal_v_charge")
+        plot_overlay(series, scans, labels, "contribTOT_v_charge")
+        plot_overlay(series, scans, labels, "contribDiscs_v_charge")
+        plot_overlay(series, scans, labels, "contribTotal_v_bias")
+        plot_overlay(series, scans, labels, "contribTOT_v_bias")
+        plot_overlay(series, scans, labels, "contribDiscs_v_bias")
 
+    
     else : #amplifer 
         # v bias
         plot_overlay(series, scans, labels, "amp_v_bias")
@@ -176,6 +204,9 @@ def get_series_results(series):
         # test
         plot_overlay(series, scans, labels, "tresCFD_v_thJitter")
         plot_overlay(series, scans, labels, "charge_v_biasShift")
+        # saturation?
+        plot_overlay(series, scans, labels, "slewrate_v_amp")
+        plot_overlay(series, scans, labels, "risetime_v_amp")
 
     return 
 

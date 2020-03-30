@@ -83,8 +83,12 @@ def axis(name):
     elif "risetime"  in name : return "mean risetime [ns]" 
     elif "noise"     in name : return "baseline RMS [mV]" 
     elif "snr"       in name : return "signal to noise ratio" 
-    elif "tresCFD"   in name : return "time resolution (CFD) [ps]"
-    elif "tresTOT"   in name : return "time resolution (TOT) [ps]"
+    elif "tresCFD"   in name : return "amplifier time res. (CFD) [ps]"
+    elif "tresTOT"   in name : return "discriminator time res. (TOT) [ps]"
+    elif "tresAmpTOT" in name: return "amplifier time res. (TOT) [ps]"
+    elif "contribTOT" in name: return "TOT method contrib. [ps]"
+    elif "contribDisc" in name: return "discrim. contrib. rel amp. [ps]"
+    elif "contribTotal" in name: return "total discrim. contrib. [ps]"
     elif "meanTOT"   in name : return "mean discriminator TOT [ns]"
     elif "meanAmpTOT" in name : return "mean amplifier TOT [ns]"
     elif "charge"    in name : return "MPV collected charge [fC]"
@@ -132,7 +136,7 @@ def graph(outfile,x,xerr,y,yerr,name):
 
     return
 
-def get_scan_results(scan): 
+def get_scan_results(scan,baseline=0): 
     
     
     # Open scan file, get configs 
@@ -140,6 +144,7 @@ def get_scan_results(scan):
     biases = []
     temps = []
     dacs = []
+    rel_dacs = []
     scan_file = open("scans/{}.txt".format(scan),"r")
     for line in scan_file: 
         if "#" in line: continue
@@ -151,6 +156,7 @@ def get_scan_results(scan):
         ch = line.split()[3]
         if "DAC" in config: 
             dacs.append(int(config.split("_")[6])) 
+            rel_dacs.append(int(config.split("_")[6])-baseline)
 
     scan_file.close()
     bias_errs = [0.1 for i in biases]
@@ -193,6 +199,16 @@ def get_scan_results(scan):
 
     tres_TOTs=[]
     err_tres_TOTs=[]
+
+    tres_ampTOTs=[]
+    err_tres_ampTOTs=[]
+
+    contrib_TOTs=[]
+    err_contrib_TOTs=[]
+    contrib_discs=[]
+    err_contrib_discs=[]
+    contrib_totals=[]
+    err_contrib_totals=[]
     
     eff_discs=[]
     err_effs_discs=[]
@@ -281,7 +297,22 @@ def get_scan_results(scan):
             mean_ampTOT, err_ampTOT = get_TOT(rootfile)
             mean_ampTOTs.append(mean_ampTOT)
             err_ampTOTs.append(err_ampTOT)
+
+            tres_ampTOT, err_tres_ampTOT = get_tres_TOT(rootfile)
+            tres_ampTOTs.append(tres_ampTOT)
+            err_tres_ampTOTs.append(err_tres_ampTOT)
             #print(tres_TOT, err_tres_TOT, eff_disc, err_eff_disc)
+   
+            # contribution to time resolution 
+            contrib_TOT   = (tres_ampTOT*tres_ampTOT - tres_CFD*tres_CFD)**0.5 if tres_ampTOT > tres_CFD else 0 
+            contrib_disc  = (tres_TOT*tres_TOT - tres_ampTOT*tres_ampTOT)**0.5 if tres_TOT > tres_ampTOT else 0 
+            contrib_total = (tres_TOT*tres_TOT - tres_CFD*tres_CFD)**0.5 if tres_TOT > tres_CFD else 0 
+            contrib_TOTs.append(contrib_TOT)
+            err_contrib_TOTs.append(0.1)
+            contrib_discs.append(contrib_disc)
+            err_contrib_discs.append(0.1)
+            contrib_totals.append(contrib_total)
+            err_contrib_totals.append(0.1)
 
             
 
@@ -298,6 +329,9 @@ def get_scan_results(scan):
     # graph(outfile,x,xerr,y,yerr,name)
     pre="gr_{}_".format(scan)
     if "dac" in scan: 
+        graph(outfile ,rel_dacs ,dac_errs ,tres_TOTs    ,err_tres_TOTs  ,pre+"tresTOT_v_reldac")
+        graph(outfile ,rel_dacs ,dac_errs ,eff_discs    ,err_effs_discs ,pre+"effDISC_v_reldac")
+        graph(outfile ,rel_dacs ,dac_errs ,mean_TOTs    ,err_TOTs       ,pre+"meanTOT_v_reldac")
         graph(outfile ,dacs ,dac_errs ,tres_TOTs    ,err_tres_TOTs  ,pre+"tresTOT_v_dac")
         graph(outfile ,dacs ,dac_errs ,eff_discs    ,err_effs_discs ,pre+"effDISC_v_dac")
         graph(outfile ,dacs ,dac_errs ,mean_TOTs    ,err_TOTs       ,pre+"meanTOT_v_dac")
@@ -309,15 +343,34 @@ def get_scan_results(scan):
         graph(outfile,biases ,bias_errs ,eff_discs     ,err_effs_discs ,pre+"effDISC_v_bias")
         graph(outfile,biases ,bias_errs ,mean_TOTs     ,err_TOTs       ,pre+"meanTOT_v_bias")
         graph(outfile,biases ,bias_errs ,mean_ampTOTs  ,err_ampTOTs    ,pre+"meanAmpTOT_v_bias")
+        graph(outfile,biases ,bias_errs ,tres_ampTOTs  ,err_tres_ampTOTs  ,pre+"tresAmpTOT_v_bias")
         # plots versus charge
         graph(outfile,mean_charges,err_charges,tres_TOTs   ,err_tres_TOTs ,pre+"tresTOT_v_charge")
         graph(outfile,mean_charges,err_charges,eff_discs   ,err_effs_discs,pre+"effDISC_v_charge")
         graph(outfile,mean_charges,err_charges,mean_TOTs   ,err_TOTs      ,pre+"meanTOT_v_charge")
         graph(outfile,mean_charges,err_charges,mean_ampTOTs,err_ampTOTs   ,pre+"meanAmpTOT_v_charge")
+        graph(outfile,mean_charges,err_charges,tres_ampTOTs,err_tres_ampTOTs ,pre+"tresAmpTOT_v_charge")
         # plots versus amplifier
-        graph(outfile,tres_CFDs   , err_tres_CFDs,tres_TOTs,err_tres_TOTs,pre+"tresTOT_v_tresCFD")
+        graph(outfile,tres_CFDs,err_tres_CFDs,tres_TOTs   ,err_tres_TOTs,pre+"tresTOT_v_tresCFD")
+        graph(outfile,tres_CFDs,err_tres_CFDs,tres_ampTOTs,err_tres_ampTOTs,pre+"tresAmpTOT_v_tresCFD")
+        graph(outfile,tres_ampTOTs,err_tres_ampTOTs,tres_TOTs,err_tres_TOTs,pre+"tresTOT_v_tresAmpTOT")
         graph(outfile,mean_ampTOTs, err_ampTOTs  ,mean_TOTs,err_TOTs     ,pre+"meanTOT_v_meanAmpTOT")
-    else : 
+        graph(outfile,mean_amplitudes,err_amplitudes,mean_TOTs,err_TOTs      ,pre+"meanTOT_v_amp")
+        graph(outfile,mean_amplitudes,err_amplitudes,mean_ampTOTs,err_ampTOTs,pre+"meanAmpTOT_v_amp")
+        # contributions
+        graph(outfile,mean_amplitudes,err_amplitudes,contrib_totals,err_contrib_totals,pre+"contribTotal_v_amp")
+        graph(outfile,mean_amplitudes,err_amplitudes,contrib_TOTs  ,err_contrib_TOTs  ,pre+"contribTOT_v_amp")
+        graph(outfile,mean_amplitudes,err_amplitudes,contrib_discs ,err_contrib_discs ,pre+"contribDiscs_v_amp")
+        graph(outfile,mean_charges ,err_charges ,contrib_totals,err_contrib_totals,pre+"contribTotal_v_charge")
+        graph(outfile,mean_charges ,err_charges ,contrib_TOTs  ,err_contrib_TOTs  ,pre+"contribTOT_v_charge")
+        graph(outfile,mean_charges ,err_charges ,contrib_discs ,err_contrib_discs ,pre+"contribDiscs_v_charge")
+        graph(outfile,biases,bias_errs ,contrib_totals,err_contrib_totals,pre+"contribTotal_v_bias")
+        graph(outfile,biases,bias_errs ,contrib_TOTs  ,err_contrib_TOTs  ,pre+"contribTOT_v_bias")
+        graph(outfile,biases,bias_errs ,contrib_discs ,err_contrib_discs ,pre+"contribDiscs_v_bias")
+    
+        # versus tot
+        graph(outfile,mean_TOTs,err_TOTs,tres_TOTs     ,err_tres_TOTs  ,pre+"tresTOT_v_meanTOT")
+    else : # 
         # versus bias
         graph(outfile,biases,bias_errs,mean_amplitudes ,err_amplitudes ,pre+"amp_v_bias")
         graph(outfile,biases,bias_errs,mean_noises     ,err_noises     ,pre+"noiseRMS_v_bias")
@@ -336,6 +389,9 @@ def get_scan_results(scan):
         graph(outfile,mean_charges,err_charges,mean_rises ,err_rises    ,pre+"risetime_v_charge")
         graph(outfile,mean_charges,err_charges,tres_CFDs  ,err_tres_CFDs,pre+"tresCFD_v_charge")
         graph(outfile,mean_charges,err_charges,exp_jitters,err_jitters  ,pre+"thJitter_v_charge")
+        #saturation check 
+        graph(outfile,mean_amplitudes,err_amplitudes,mean_rises ,err_rises ,pre+"risetime_v_amp")
+        graph(outfile,mean_amplitudes,err_amplitudes,mean_slews ,err_slews ,pre+"slewrate_v_amp")
         # cross check
         graph(outfile,exp_jitters,err_jitters,tres_CFDs ,err_tres_CFDs,pre+"tresCFD_v_thJitter")
     outfile.Close()
@@ -352,6 +408,8 @@ def get_scans():
         if "#" in line: continue
         scan = line.strip()
         get_scan_results(scan)
+        if "dac" in scan and "11" in scan : get_scan_results(scan,213)
+        if "dac" in scan and "9" in scan : get_scan_results(scan,206)
 
 # Main
 get_scans()

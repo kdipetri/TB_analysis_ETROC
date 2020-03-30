@@ -1,5 +1,6 @@
 from array import array
 from style import setStyle
+from tot_cleaning import tot_cleaning
 import os, sys, re
 import ROOT
 
@@ -321,9 +322,14 @@ def get_time_walk(tree,cfg,ch,outfile):
     maxAmp = get_max_amp(ch,cfg)
     minT = get_min_time(ch,cfg)-1e-9
     maxT = get_max_time(ch,cfg)+1e-9
-    mintot = 1e-9
-    maxtot = 10e-9
-    if "RFSel_0" in cfg: maxtot = 15e-9
+    mintot,maxtot = tot_cleaning(cfg)
+    #mint0 = 
+    histmax = 10e-9
+    if "RFSel_0" in cfg: histmax = 15e-9
+    if "190_IBSel_0b000_RFSel_3_DAC_424" in cfg and ch==0: 
+        histmax = 6e-9
+        minT = 3.5e-9
+        maxT = 4.5e-9
     
     #print("minAmp = {}".format(minAmp))
     #print("maxAmp = {}".format(maxAmp))
@@ -332,28 +338,24 @@ def get_time_walk(tree,cfg,ch,outfile):
     #print("minT   = {}".format(minT  ))
     #print("maxT   = {}".format(maxT  ))
 
-    hist = ROOT.TH2D("h_timewalk","",100,0,maxtot,100,minT,maxT)
+    hist = ROOT.TH2D("h_timewalk","",100,0,histmax,100,minT,maxT)
     
-    tree.Project("h_timewalk","t0_30[%i]-LP2_20[%i]:tot_30[%i]"%(ch,ch_photek,ch),"amp[%i]>%i && amp[%i]>%i && amp[%i]<%i && LP2_20[%i]!=0 && t0_30[%i]!=0 && tot_30[%i]>%f"%(ch,minAmp,ch_photek,minPh,ch_photek,maxPh,ch_photek,ch, ch,mintot),"COLZ")
+
+    tree.Project("h_timewalk","t0_30[%i]-LP2_20[%i]:tot_30[%i]"%(ch,ch_photek,ch),"amp[%i]>%i && amp[%i]>%i && amp[%i]<%i && LP2_20[%i]!=0 && t0_30[%i]!=0 && tot_30[%i]>%f *1e-9 && tot_30[%i]<%f * 1e-9"%(ch,minAmp,ch_photek,minPh,ch_photek,maxPh,ch_photek,ch, ch,mintot, ch,maxtot),"COLZ")
 
     c = ROOT.TCanvas()
     hist.Draw("COLZ")
-    c.Print("plots/configs/{}_ch{}_t0_v_tot.pdf".format(cfg,ch))
     
     profile = hist.ProfileX("h_timewalkprof")
     spread  = hist.ProfileX("h_timewalkspread",1,-1,"s")
     
-    #fitmintot = mintot#1e-9
-    #fitmaxtot = maxtot#10e-9
-    f1 = ROOT.TF1("f_timewalk","pol3",0,maxtot)
-    hist.Fit(f1,"Q")
-    
-    profile.Draw()
+    profile.Draw("same")
     profile.SetMarkerStyle(20);
+    profile.SetMarkerSize(0.8);
     profile.SetMarkerColor(ROOT.kBlack);
     profile.SetLineColor(ROOT.kBlack);
-    profile.SetLineWidth(3);
-    spread.SetFillColorAlpha(ROOT.kBlack,0.35);
+    profile.SetLineWidth(1);
+    spread.SetFillColorAlpha(ROOT.kBlack,0.2);
     spread.Draw("e2sames");
     
     profile.GetXaxis().SetRangeUser(0,maxtot) 
@@ -362,6 +364,16 @@ def get_time_walk(tree,cfg,ch,outfile):
     spread .GetYaxis().SetRangeUser(minT,maxT)
     profile.GetYaxis().SetTitle("t_{0}-t_{ref} [s]") 
     
+    c.Print("plots/configs/{}_ch{}_t0_v_tot.pdf".format(cfg,ch))
+    
+    #fitmintot = mintot#1e-9
+    #fitmaxtot = maxtot#10e-9
+    # 3rd order
+    f1 = ROOT.TF1("f_timewalk","pol3",0,histmax)
+    hist.Fit(f1,"Q")
+
+    profile.Draw("")
+    spread.Draw("e2sames");
     f1.Draw("same")
     
     c.Print("plots/configs/{}_ch{}_t0_v_tot_fit.pdf".format(cfg,ch))
@@ -388,26 +400,30 @@ def get_time_TOT(tree,cfg,ch,fit_params,outfile):
     maxAmp = get_max_amp(ch,cfg)
     mint = -1e-9
     maxt =  1e-9
-    mintot = 1.0e-9
-    maxtot = 11.1e-9
+    mintot,maxtot = tot_cleaning(cfg)
+    histmax = 10e-9
+    if "RFSel_0" in cfg: histmax = 15e-9
+    if "190_IBSel_0b000_RFSel_3_DAC_424" in cfg and ch==0: 
+        histmax = 6e-9
+        minT = 3.5e-9
+        maxT = 4.5e-9
     
     (x0,x1,x2,x3) = fit_params
     f_TOT = "{:e} + {:e}*tot_30[{}] + {:e}*tot_30[{}]**2 + {:e}*tot_30[{}]**3 - t0_30[{}] + LP2_20[3]".format(x0,x1,ch,x2,ch,x3,ch,ch) 
-    #print(f_TOT)
     
     # 2D hist to validate time walk correction
-    hist2D = ROOT.TH2D("h_timewalkcorr",";TOT [s];t-t_{ref} (TOT,corr) [s]",100,mintot,maxtot,100,mint,maxt)
+    hist2D = ROOT.TH2D("h_timewalkcorr",";TOT [s];t-t_{ref} (TOT,corr) [s]",100,0,histmax,100,mint,maxt)
     
-    tree.Project("h_timewalkcorr","%s:tot_30[%i]"%(f_TOT,ch),"amp[%i]>%i && amp[%i]>%i && amp[%i]<%i && LP2_20[%i]!=0 && t0_30[%i]!=0 && tot_30[%i]>%f"%(ch,minAmp,ch_photek,minPh,ch_photek,maxPh,ch_photek,ch, ch,mintot),"COLZ")
+    tree.Project("h_timewalkcorr","%s:tot_30[%i]"%(f_TOT,ch),"amp[%i]>%i && amp[%i]>%i && amp[%i]<%i && LP2_20[%i]!=0 && t0_30[%i]!=0 && tot_30[%i]>%f*1e-9 &&tot_30[%i]<%f*1e-9"%(ch,minAmp,ch_photek,minPh,ch_photek,maxPh,ch_photek,ch, ch,mintot, ch,maxtot),"COLZ")
 
     c = ROOT.TCanvas()
     hist2D.Draw("COLZ")
     c.Print("plots/configs/{}_ch{}_t0_v_tot_corr.pdf".format(cfg,ch))
-    
+
     # 1D hist for final corrected time resolution
     hist = ROOT.TH1D("h_timeTOT",";t-t_{ref} (TOT) [s]",100,mint,maxt)
     
-    tree.Project("h_timeTOT","%s"%(f_TOT),"amp[%i]>%i && amp[%i]>%i && amp[%i]<%i && LP2_20[%i]!=0 && t0_30[%i]!=0 && tot_30[%i] > %f"%(ch,minAmp,ch_photek,minPh,ch_photek,maxPh,ch_photek,ch, ch,mintot))
+    tree.Project("h_timeTOT","%s"%(f_TOT),"amp[%i]>%i && amp[%i]>%i && amp[%i]<%i && LP2_20[%i]!=0 && t0_30[%i]!=0 && tot_30[%i]>%f*1e-9 && tot_30[%i]<%f*1e-9"%(ch,minAmp,ch_photek,minPh,ch_photek,maxPh,ch_photek,ch, ch,mintot, ch,maxtot))
     
     f1 = ROOT.TF1("f_timeTOT","gaus",mint,maxt)
     
@@ -421,7 +437,7 @@ def get_time_TOT(tree,cfg,ch,fit_params,outfile):
     hist2D.Write()
     hist.Write()
     f1.Write()
-    
+
     return  
 
 def get_tot_channel(tree,cfg,ch,outfile):
@@ -459,7 +475,7 @@ def get_disc_eff(tree,cfg,ch,ch_amp,outfile):
 
     return 
     
-def get_config_results(cfg):
+def get_config_results(cfg,opt=""):
     
     # Open config file, get runs
     runs = []
@@ -488,6 +504,11 @@ def get_config_results(cfg):
         # for speed
         if (is_discrim(ch,cfg) or is_etroc_amp(ch,cfg)) and "IBSel" not in cfg: continue  
         if not is_discrim(ch,cfg) and not is_etroc_amp(ch,cfg) and "IBSel" in cfg: continue
+
+        # more speed
+        if "ETROC_amp" in opt and not is_etroc_amp(ch,cfg) : continue
+        if "ETROC_dis" in opt and not is_discrim(ch,cfg) : continue
+        if "UCSC" in opt and (is_discrim(ch,cfg) or is_etroc_amp(ch,cfg)) : continue
         
         outname = "plots/configs/root/{}_ch{}.root".format(cfg,ch)
         outfile = ROOT.TFile.Open(outname,"RECREATE")
@@ -502,8 +523,10 @@ def get_config_results(cfg):
         get_time_CFD(tree,cfg,ch,outfile)
 
         global_conf = int_conf(cfg) 
-        if global_conf > 146 and (is_discrim(ch,cfg) or is_etroc_amp(ch,cfg)) : 
+        if global_conf > 146 and is_etroc_amp(ch,cfg) : 
             get_tot_channel(tree,cfg,ch,outfile)
+            totparams = get_time_walk(tree,cfg,ch,outfile)
+            get_time_TOT(tree,cfg,ch,totparams,outfile)
 
         # Discriminator stuffs
         if is_discrim(ch,cfg): 
@@ -532,16 +555,21 @@ def get_configurations():
         #if "148_IBSel_0b111_RFSel_3_DAC_228" not in line: continue
         global_conf = int_conf(line.strip()) 
         #if global_conf > 139: continue # amplifiers only
-        #if global_conf < 146 : continue 
+        if global_conf < 146 : continue 
         #if global_conf > 180 : continue
         #if global_conf != 135 : continue
         #if not ("189" in line or "190" in line ): continue
         #if "185_IBSel_0b111_RFSel_3_DAC_318" not in line : continue
         #if "148_IBSel_0b111_RFSel_3_DAC_248" not in line : continue
         #if "148_IBSel_0b111_RFSel_3_DAC_228" not in line: continue
+        #if "153_IBSel_0b000_RFSel_3_DAC_334" not in line : continue
+        #if "153" not in line : continue
+        #if "190_IBSel_0b000_RFSel_3_DAC_424" not in line : continue 
+        if "151" not in line : continue
 
         if "#" in line: continue
         cfg = line.strip()
+        get_config_results(cfg,"ETROC_amp")
         get_config_results(cfg)
 
 # Main
