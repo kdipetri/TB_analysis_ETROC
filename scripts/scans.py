@@ -305,14 +305,18 @@ def get_scan_results(scan,baseline=0):
    
             # contribution to time resolution 
             contrib_TOT   = (tres_ampTOT*tres_ampTOT - tres_CFD*tres_CFD)**0.5 if tres_ampTOT > tres_CFD else 0 
-            contrib_disc  = (tres_TOT*tres_TOT - tres_ampTOT*tres_ampTOT)**0.5 if tres_TOT > tres_ampTOT else 0 
+            contrib_disc  = (tres_TOT*tres_TOT - tres_ampTOT*tres_ampTOT)**0.5 if tres_TOT > tres_ampTOT else 0
             contrib_total = (tres_TOT*tres_TOT - tres_CFD*tres_CFD)**0.5 if tres_TOT > tres_CFD else 0 
+            tmp_contrib_TOT = ( abs(tres_CFD*tres_CFD - tres_ampTOT*tres_ampTOT ) ) **0.5
+            err_contrib_TOT = ( (tres_ampTOT*err_tres_ampTOT)**2+(tres_CFD*err_tres_CFD)**2 )**0.5/(contrib_TOT if tres_ampTOT > tres_CFD else tmp_contrib_TOT )  
+            err_contrib_disc = ( (tres_TOT*err_tres_TOT)**2 + (tres_ampTOT*err_tres_ampTOT)**2 )**0.5/(contrib_disc if tres_TOT > tres_ampTOT else err_tres_TOT*err_tres_ampTOT)
+            err_contrib_total = ( (tres_TOT*err_tres_TOT)**2 + (tres_CFD*err_tres_CFD)**2 )**0.5/(contrib_total if tres_TOT > tres_CFD else err_tres_TOT+err_tres_CFD) 
             contrib_TOTs.append(contrib_TOT)
-            err_contrib_TOTs.append(0.1)
+            err_contrib_TOTs.append(err_contrib_TOT)
             contrib_discs.append(contrib_disc)
-            err_contrib_discs.append(0.1)
+            err_contrib_discs.append(err_contrib_disc)
             contrib_totals.append(contrib_total)
-            err_contrib_totals.append(0.1)
+            err_contrib_totals.append(err_contrib_total)
 
             
 

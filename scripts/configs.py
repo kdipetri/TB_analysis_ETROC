@@ -573,5 +573,8 @@ def get_configurations():
         get_config_results(cfg)
 
 # Main
-get_configurations()
+if __name__ == "__main__":
+    # execute only if run as a script
+    #main()
+    get_configurations()
 

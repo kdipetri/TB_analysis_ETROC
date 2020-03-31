@@ -1,0 +1,5 @@
+#config BV temp ch board
+config_153_IBSel_0b111_RFSel_3_DAC_221 220 20 1 9 
+config_153_IBSel_0b000_RFSel_3_DAC_334 220 20 1 9
+config_149_IBSel_0b111_RFSel_3_DAC_228 220 20 0 11
+config_149_IBSel_0b000_RFSel_3_DAC_333 220 20 0 11
